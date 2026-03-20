@@ -96,23 +96,27 @@
 
 #input-display {
   color: #ffffff;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  white-space: pre;
+  flex-shrink: 0;
 }
 
-/* ===== 光标效果 ===== */
+/* ===== 光标 ===== */
+
+/* 旧光标元素 - 保留但隐藏，不再使用 */
 #cursor {
-  color: #00ff41;
-  margin-left: -1px;
+  display: none;
 }
 
-#cursor.blink {
-  animation: blink 1s step-end infinite;
+/* 内联光标字符 - 反色闪烁块 */
+.cursor-char {
+  background: #00ff41;
+  color: #0a0a0a;
+  animation: cursorBlink 1s step-end infinite;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+@keyframes cursorBlink {
+  0%, 100% { background: #00ff41; color: #0a0a0a; }
+  50% { background: transparent; color: #ffffff; }
 }
 
 /* ===== 隐藏输入框 ===== */

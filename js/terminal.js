@@ -13,15 +13,13 @@ class Terminal {
     this.inputLineEl = document.getElementById('input-line');
     this.promptEl = document.getElementById('prompt');
     this.inputDisplayEl = document.getElementById('input-display');
-    this.cursorEl = document.getElementById('cursor');
     this.hiddenInput = document.getElementById('hidden-input');
 
     // 输入状态
     this.currentInput = '';
     this.cursorPos = 0;
-    this.inputHistory = [];
     this.historyIndex = -1;
-    this.tempInput = ''; // 浏览历史时暂存当前输入
+    this.tempInput = '';
 
     // 状态
     this.isProcessing = false;
@@ -33,47 +31,40 @@ class Terminal {
   }
 
   _init() {
-    // 更新 prompt
     this.updatePrompt();
+    this._renderInput();
 
-    // 绑定键盘事件
     document.addEventListener('keydown', (e) => this._onKeyDown(e));
 
-    // 点击终端聚焦隐藏输入
     this.terminalEl.addEventListener('click', () => {
       this.hiddenInput.focus();
     });
 
-    // 处理移动端输入
     this.hiddenInput.addEventListener('input', (e) => {
       const value = this.hiddenInput.value;
       if (value) {
-        this.currentInput += value;
-        this.cursorPos = this.currentInput.length;
+        this.currentInput = this.currentInput.slice(0, this.cursorPos) + value + this.currentInput.slice(this.cursorPos);
+        this.cursorPos += value.length;
         this.hiddenInput.value = '';
         this._renderInput();
       }
     });
 
-    // 聚焦
     this.hiddenInput.focus();
   }
 
   // ===== 键盘事件处理 =====
 
   _onKeyDown(e) {
-    // 如果正在等待 read 命令的输入
     if (this.isWaitingForInput) {
       this._handleReadInput(e);
       return;
     }
 
-    // 如果正在处理命令，忽略输入
     if (this.isProcessing) {
-      // 允许 Ctrl+C 中断
       if (e.ctrlKey && e.key === 'c') {
         e.preventDefault();
-        this._appendOutput(`^C`, 'command-output');
+        this._appendOutput('^C', 'command-output');
         this.currentInput = '';
         this.cursorPos = 0;
         this.updatePrompt();
@@ -92,13 +83,7 @@ class Terminal {
     if (e.ctrlKey) {
       switch (e.key) {
         case 'c':
-          if (this.currentInput) {
-            // 复制选中文本
-            const selection = window.getSelection().toString();
-            if (selection) {
-              navigator.clipboard.writeText(selection).catch(() => {});
-            }
-          }
+          // 复制选中文本
           break;
         case 'l':
           this.clear();
@@ -121,17 +106,9 @@ class Terminal {
           this._renderInput();
           break;
         case 'w':
-          // 删除光标前的一个词
-          const before = this.currentInput.slice(0, this.cursorPos);
-          const after = this.currentInput.slice(this.cursorPos);
-          const trimmed = before.trimEnd();
-          const lastSpace = trimmed.lastIndexOf(' ');
-          this.currentInput = (lastSpace === -1 ? '' : before.slice(0, lastSpace + 1)) + after;
-          this.cursorPos = lastSpace === -1 ? 0 : lastSpace + 1;
-          this._renderInput();
+          this._deleteWordBackward();
           break;
         case 'd':
-          // EOF 或删除光标后的字符
           if (this.currentInput.length === 0) {
             this._appendOutput('exit', 'command-output');
           } else {
@@ -146,31 +123,11 @@ class Terminal {
     // Alt 组合键
     if (e.altKey) {
       if (e.key === 'b') {
-        // 向后移动一个词
-        const before = this.currentInput.slice(0, this.cursorPos);
-        const trimmed = before.trimEnd();
-        const lastSpace = trimmed.lastIndexOf(' ');
-        this.cursorPos = lastSpace === -1 ? 0 : lastSpace + 1;
-        this._renderInput();
+        this._moveWordBackward();
       } else if (e.key === 'f') {
-        // 向前移动一个词
-        const after = this.currentInput.slice(this.cursorPos);
-        const nextSpace = after.indexOf(' ');
-        if (nextSpace === -1) {
-          this.cursorPos = this.currentInput.length;
-        } else {
-          this.cursorPos += nextSpace + 1;
-        }
-        this._renderInput();
+        this._moveWordForward();
       } else if (e.key === 'Backspace') {
-        // 删除光标前的一个词
-        const before = this.currentInput.slice(0, this.cursorPos);
-        const after = this.currentInput.slice(this.cursorPos);
-        const trimmed = before.trimEnd();
-        const lastSpace = trimmed.lastIndexOf(' ');
-        this.currentInput = (lastSpace === -1 ? '' : before.slice(0, lastSpace + 1)) + after;
-        this.cursorPos = lastSpace === -1 ? 0 : lastSpace + 1;
-        this._renderInput();
+        this._deleteWordBackward();
       }
       return;
     }
@@ -232,6 +189,51 @@ class Terminal {
     }
   }
 
+  // ===== 光标渲染（核心修复） =====
+
+  _renderInput() {
+    const before = this.currentInput.slice(0, this.cursorPos);
+    const charAtCursor = this.currentInput[this.cursorPos] || '';
+    const after = this.currentInput.slice(this.cursorPos + 1);
+
+    // 转义 HTML
+    const escapeBefore = this._escapeHtml(before);
+    const escapeChar = this._escapeHtml(charAtCursor);
+    const escapeAfter = this._escapeHtml(after);
+
+    // 光标位置：有字符则反色显示字符，没有字符则显示空格块
+    const cursorHtml = '<span class="cursor-char">' + (escapeChar || '&nbsp;') + '</span>';
+
+    this.inputDisplayEl.innerHTML = escapeBefore + cursorHtml + escapeAfter;
+  }
+
+  // ===== 工具方法 =====
+
+  _deleteWordBackward() {
+    const before = this.currentInput.slice(0, this.cursorPos);
+    const after = this.currentInput.slice(this.cursorPos);
+    const trimmed = before.trimEnd();
+    const lastSpace = trimmed.lastIndexOf(' ');
+    this.currentInput = (lastSpace === -1 ? '' : before.slice(0, lastSpace + 1)) + after;
+    this.cursorPos = lastSpace === -1 ? 0 : lastSpace + 1;
+    this._renderInput();
+  }
+
+  _moveWordBackward() {
+    const before = this.currentInput.slice(0, this.cursorPos);
+    const trimmed = before.trimEnd();
+    const lastSpace = trimmed.lastIndexOf(' ');
+    this.cursorPos = lastSpace === -1 ? 0 : lastSpace + 1;
+    this._renderInput();
+  }
+
+  _moveWordForward() {
+    const after = this.currentInput.slice(this.cursorPos);
+    const nextSpace = after.indexOf(' ');
+    this.cursorPos = nextSpace === -1 ? this.currentInput.length : this.cursorPos + nextSpace + 1;
+    this._renderInput();
+  }
+
   // ===== Tab 补全 =====
 
   _onTab() {
@@ -242,13 +244,11 @@ class Terminal {
     let completions = [];
 
     if (isFirstToken) {
-      // 补全命令名
       const cmdNames = Object.keys(this.shell.commands);
       const aliasNames = Object.keys(this.shell.aliases);
       const allNames = [...new Set([...cmdNames, ...aliasNames])];
       completions = allNames.filter(n => n.startsWith(partial));
     } else {
-      // 补全路径
       completions = this._completePath(partial);
     }
 
@@ -256,7 +256,6 @@ class Terminal {
       const completion = completions[0];
       tokens[tokens.length - 1] = completion;
       this.currentInput = tokens.join(' ');
-      // 如果是目录，追加 /
       const fullPath = this.shell.fs.resolvePath(this.shell.cwd, completion);
       if (this.shell.fs.isDir(fullPath)) {
         this.currentInput += '/';
@@ -264,7 +263,6 @@ class Terminal {
       this.cursorPos = this.currentInput.length;
       this._renderInput();
     } else if (completions.length > 1) {
-      // 显示所有候选项
       this._renderCurrentLine();
       this._appendOutput(completions.join('  '), 'command-output');
       this.scrollToBottom();
@@ -326,15 +324,12 @@ class Terminal {
   async _onEnter() {
     const input = this.currentInput;
 
-    // 渲染已输入的命令行
     this._renderCurrentLine();
 
-    // 清空输入
     this.currentInput = '';
     this.cursorPos = 0;
     this.historyIndex = -1;
 
-    // 如果是空行
     if (!input.trim()) {
       this.updatePrompt();
       this._renderInput();
@@ -342,9 +337,8 @@ class Terminal {
       return;
     }
 
-    // 执行命令
     this.isProcessing = true;
-    this.inputDisplayEl.textContent = '';
+    this._renderInput();
     this.promptEl.textContent = '';
 
     try {
@@ -369,7 +363,6 @@ class Terminal {
       this.isWaitingForInput = true;
       this.inputResolve = resolve;
       this.promptEl.textContent = promptText || '';
-      this.inputDisplayEl.textContent = '';
       this.currentInput = '';
       this.cursorPos = 0;
       this._renderInput();
@@ -405,25 +398,10 @@ class Terminal {
 
   // ===== 渲染方法 =====
 
-  // 更新 prompt
   updatePrompt() {
     this.promptEl.textContent = this.shell.getPrompt();
   }
 
-  // 渲染当前输入行
-  _renderInput() {
-    const before = this.currentInput.slice(0, this.cursorPos);
-    const after = this.currentInput.slice(this.cursorPos + 1);
-    const charAtCursor = this.currentInput[this.cursorPos] || '';
-
-    this.inputDisplayEl.innerHTML = this._escapeHtml(before);
-
-    // 更新光标
-    this.cursorEl.textContent = charAtCursor || ' ';
-    this.cursorEl.className = 'blink';
-  }
-
-  // 渲染当前行（固化到输出区域）
   _renderCurrentLine() {
     const line = document.createElement('div');
     line.className = 'command-line';
@@ -441,7 +419,6 @@ class Terminal {
     this.outputEl.appendChild(line);
   }
 
-  // 追加输出
   _appendOutput(text, className = 'command-output') {
     if (text === null || text === undefined) return;
 
@@ -450,7 +427,6 @@ class Terminal {
       const div = document.createElement('div');
       div.className = className;
 
-      // 检查是否包含 ANSI 颜色代码，转换为 HTML
       if (line.includes('\x1b[')) {
         div.innerHTML = this._ansiToHtml(line);
       } else {
@@ -461,11 +437,9 @@ class Terminal {
     }
   }
 
-  // ANSI 转 HTML（简化版）
   _ansiToHtml(text) {
     let result = this._escapeHtml(text);
 
-    // 基本颜色
     result = result.replace(/\x1b\[0m/g, '</span>');
     result = result.replace(/\x1b\[1m/g, '<span style="font-weight:bold">');
     result = result.replace(/\x1b\[30m/g, '<span style="color:#000">');
@@ -477,38 +451,31 @@ class Terminal {
     result = result.replace(/\x1b\[36m/g, '<span style="color:#00d4ff">');
     result = result.replace(/\x1b\[37m/g, '<span style="color:#fff">');
     result = result.replace(/\x1b\[90m/g, '<span style="color:#888">');
-    result = result.replace(/\x1b\[38;5;(\d+)m/g, (m, code) => {
-      return `<span style="color:var(--ansi-${code},#fff)">`;
-    });
+    result = result.replace(/\x1b\[38;5;(\d+)m/g, '<span style="color:var(--ansi-$1,#fff)">');
 
-    // 移除其他未处理的 ANSI 代码
     result = result.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
 
     return result;
   }
 
-  // HTML 转义
   _escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
 
-  // 清空终端
   clear() {
     this.outputEl.innerHTML = '';
     this.updatePrompt();
     this._renderInput();
   }
 
-  // 滚动到底部
   scrollToBottom() {
     requestAnimationFrame(() => {
       this.terminalEl.scrollTop = this.terminalEl.scrollHeight;
     });
   }
 
-  // 输出欢迎信息
   showBanner() {
     const banner = `
  _____  _____  _____    ___   ____
@@ -526,13 +493,11 @@ class Terminal {
     this.scrollToBottom();
   }
 
-  // 打印消息（供外部调用）
   print(text, className) {
     this._appendOutput(text, className);
     this.scrollToBottom();
   }
 
-  // 打印错误
   printError(text) {
     this._appendOutput(text, 'error-output');
     this.scrollToBottom();
