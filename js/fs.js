@@ -28,7 +28,7 @@ class VirtualFS {
                   type: 'dir', name: 'documents', children: {
                     'readme.txt': {
                       type: 'file', name: 'readme.txt',
-                      content: 'Welcome to JS-OS!\nThis is a simulated Linux environment.\nType "help" to see available commands.',
+                      content: 'Welcome to OS-JS!\nThis is a simulated Linux environment.\nType "help" to see available commands.',
                       modified: Date.now()
                     },
                     'notes.txt': {
@@ -50,7 +50,7 @@ class VirtualFS {
                 },
                 '.bashrc': {
                   type: 'file', name: '.bashrc',
-                  content: '# JS-OS Shell Configuration\nexport PS1="user@js-os:~$ "',
+                  content: '# OS-JS Shell Configuration\nexport PS1="user@os-js:~$ "',
                   modified: Date.now()
                 },
                 '.profile': {
@@ -65,7 +65,7 @@ class VirtualFS {
         etc: {
           type: 'dir', name: 'etc', children: {
             'hosts': { type: 'file', name: 'hosts', content: '127.0.0.1   localhost\n::1         localhost', modified: Date.now() },
-            'hostname': { type: 'file', name: 'hostname', content: 'js-os', modified: Date.now() },
+            'hostname': { type: 'file', name: 'hostname', content: 'os-js', modified: Date.now() },
             'passwd': { type: 'file', name: 'passwd', content: 'root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:User:/home/user:/bin/bash', modified: Date.now() },
             'shells': { type: 'file', name: 'shells', content: '/bin/bash\n/bin/sh', modified: Date.now() },
             'profile': { type: 'file', name: 'profile', content: '# /etc/profile\nexport PATH="/usr/local/bin:/usr/bin:/bin"', modified: Date.now() }
@@ -77,7 +77,7 @@ class VirtualFS {
           type: 'dir', name: 'var', children: {
             log: {
               type: 'dir', name: 'log', children: {
-                'syslog': { type: 'file', name: 'syslog', content: '[INFO] JS-OS initialized.\n[INFO] File system mounted.\n[INFO] Shell ready.', modified: Date.now() }
+                'syslog': { type: 'file', name: 'syslog', content: '[INFO] OS-JS initialized.\n[INFO] File system mounted.\n[INFO] Shell ready.', modified: Date.now() }
               }
             },
             tmp: { type: 'dir', name: 'tmp', children: {} }

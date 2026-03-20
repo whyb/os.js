@@ -10,7 +10,7 @@ class Shell {
     // 执行上下文
     this.cwd = '/home/user';             // 当前工作目录
     this.username = 'user';              // 用户名
-    this.hostname = 'js-os';             // 主机名
+    this.hostname = 'os-js';             // 主机名
     this.homeDir = '/home/user';         // 主目录
     this.lastExitCode = 0;               // 上次命令退出码
 
@@ -24,7 +24,7 @@ class Shell {
       LANG: 'en_US.UTF-8',
       PWD: '/home/user',
       OLDPWD: '/home/user',
-      HOSTNAME: 'js-os',
+      HOSTNAME: 'os-js',
       PS1: '\\u@\\h:\\w$ ',
       EDITOR: 'vim',
       HISTSIZE: '1000',

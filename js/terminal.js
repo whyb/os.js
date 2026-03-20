@@ -519,7 +519,7 @@ class Terminal {
 \\/     \\_/ \\_\\/\\____/     |_/ \\_|`;
     this._appendOutput(banner, 'banner');
     this._appendOutput('', 'command-output');
-    this._appendOutput('  Welcome to JS-OS v0.1.0 (Browser/Linux)', 'banner-info');
+    this._appendOutput('  Welcome to OS-JS v0.1.0 (Browser/Linux)', 'banner-info');
     this._appendOutput('  A minimal Linux-like terminal simulator', 'banner-info');
     this._appendOutput('  Type "help" for available commands.', 'banner-info');
     this._appendOutput('', 'command-output');

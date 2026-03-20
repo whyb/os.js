@@ -1,4 +1,4 @@
-# 🖥️ JS-OS — 基于浏览器的极简 Linux 终端模拟器
+# 🖥️ OS-JS — 基于浏览器的极简 Linux 终端模拟器
 
 <div align="center">
 
@@ -18,11 +18,15 @@
 
 ## 📖 项目简介
 
-JS-OS 是一个基于纯 JavaScript + HTML + CSS 实现的极简 Linux 风格终端模拟器，完全在浏览器端运行，无需任何后端服务。它模拟了一个类 Unix 操作系统的核心交互体验，包括虚拟文件系统、bash 兼容的命令行 Shell、命令历史、Tab 补全等特性。
+OS-JS 是一个基于纯 JavaScript + HTML + CSS 实现的极简 Linux 风格终端模拟器，完全在浏览器端运行，无需任何后端服务。它模拟了一个类 Unix 操作系统的核心交互体验，包括虚拟文件系统、bash 兼容的命令行 Shell、命令历史、Tab 补全等特性。
 
 本项目的完整设计、架构规划与代码实现均由**小米公司发布的 MiMo-V2-Pro 大模型**生成。MiMo-V2-Pro 作为小米自研的大语言模型，在代码生成、系统架构设计和多轮对话协作方面展现了强大的能力，从需求分析到模块拆分、从命令实现到 UI 渲染，整个开发过程充分体现了 MiMo-V2-Pro 在前端工程领域的深度理解与创造力。
 
 ---
+
+## 🚀 立即体验
+[https://whyb.github.io/os.js/](https://whyb.github.io/os.js/)
+
 
 ## ✨ 核心特性
 
@@ -42,8 +46,8 @@ JS-OS 是一个基于纯 JavaScript + HTML + CSS 实现的极简 Linux 风格终
 ### 安装
 
 ```bash
-git clone https://github.com/your-username/js-os.git
-cd js-os
+git clone https://github.com/your-username/os-js.git
+cd os-js
 ```
 
 ### 运行
@@ -51,7 +55,7 @@ cd js-os
 
 ### 文件结构
 ```
-js-os/
+os-js/
 ├── README.md              # 项目说明文档
 ├── index.html             # 入口页面
 ├── css/
@@ -210,11 +214,11 @@ js-os/
 / /   \  \   //\__/ /\___  | | |
 \/     \_/ \_/\____/     |_/ \_|
 
-  Welcome to JS-OS v0.1.0 (Browser/Linux)
+  Welcome to OS-JS v0.1.0 (Browser/Linux)
   A minimal Linux-like terminal simulator
   Type "help" for available commands.
 
-user@js-os:~$ ls -la
+user@os-js:~$ ls -la
 drwxr-xr-x 2 user user    0 Nov 15 14:30 .
 drwxr-xr-x 2 user user    0 Nov 15 14:30 ..
 -rw-r--r-- 1 user user   32 Nov 15 14:30 .bashrc
@@ -223,10 +227,10 @@ drwxr-xr-x 2 user user    0 Nov 15 14:30 documents
 drwxr-xr-x 2 user user    0 Nov 15 14:30 downloads
 drwxr-xr-x 2 user user    0 Nov 15 14:30 projects
 
-user@js-os:~$ fortune
+user@os-js:~$ fortune
 Talk is cheap. Show me the code. - Linus Torvalds
 
-user@js-os:~$ cal
+user@os-js:~$ cal
       December 2025
 Su Mo Tu We Th Fr Sa
     1  2  3  4  5  6
@@ -235,9 +239,9 @@ Su Mo Tu We Th Fr Sa
 21 22 23 24 25 26 27
 28 29 30 31
 
-user@js-os:~$ cowsay "JS-OS is awesome!"
+user@os-js:~$ cowsay "OS-JS is awesome!"
  ________________________
-< JS-OS is awesome! >
+< OS-JS is awesome! >
  ------------------------
         \   ^__^
          \  (oo)\_______

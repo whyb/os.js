@@ -220,7 +220,7 @@
       },
     };
 
-    let output = '\x1b[1;33mJS-OS Shell - Available Commands\x1b[0m\n';
+    let output = '\x1b[1;33mOS-JS Shell - Available Commands\x1b[0m\n';
     output += '\x1b[90m' + '─'.repeat(60) + '\x1b[0m\n';
 
     for (const [category, cmds] of Object.entries(categories)) {
@@ -995,12 +995,12 @@
     }
 
     if (all || (!kernel && !nodename && !release && !machine && !os)) {
-      return 'Linux js-os 0.1.0-browser #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux';
+      return 'Linux os-js 0.1.0-browser #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux';
     }
 
     let parts = [];
     if (kernel) parts.push('Linux');
-    if (nodename) parts.push('js-os');
+    if (nodename) parts.push('os-js');
     if (release) parts.push('0.1.0-browser');
     if (machine) parts.push('x86_64');
     if (os) parts.push('GNU/Linux');
@@ -2128,7 +2128,7 @@
 ║   ██║███████║      ╚██████╔╝███████║                     ║
 ║   ╚═╝╚══════╝       ╚═════╝ ╚══════╝                     ║
 ║                                                          ║
-║   Welcome to JS-OS v0.1.0                                ║
+║   Welcome to OS-JS v0.1.0                                ║
 ║   A browser-based Linux terminal simulator               ║
 ║                                                          ║
 ║   🖥️  Simulated kernel: 0.1.0-browser                    ║
@@ -2142,7 +2142,7 @@
 
   // banner
   shell.registerCommand('banner', (args) => {
-    const text = args.join(' ') || 'JS-OS';
+    const text = args.join(' ') || 'OS-JS';
     const lines = ['', '', '', '', '', '', '', ''];
 
     const font = {
