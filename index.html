@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OS-JS Terminal</title>
+  <title>OS-JS Terminal / Desktop</title>
   <link rel="stylesheet" href="css/terminal.css">
+  <link rel="stylesheet" href="css/desktop/desktop.css">
 </head>
 <body>
   <div id="terminal">
@@ -17,9 +18,43 @@
 
   <input type="text" id="hidden-input" autocomplete="off" autocapitalize="off">
 
+  <!-- Desktop Environment -->
+  <div id="desktop-container">
+    <canvas id="desktop-canvas"></canvas>
+    
+    <div id="desktop-icons"></div>
+    
+    <div id="taskbar">
+      <button id="start-button">🌀</button>
+      <div id="taskbar-windows"></div>
+      <div id="taskbar-tray">
+        <button class="tray-icon" id="tray-clipboard" title="Clipboard">📋</button>
+        <button class="tray-icon" id="tray-network" title="Network">📶</button>
+        <button class="tray-icon" id="tray-volume" title="Volume">🔊</button>
+        <span id="taskbar-clock" title="Calendar"></span>
+        <button class="tray-icon" id="tray-notifications" title="Notifications" style="position:relative;">
+          🔔
+          <span id="notification-badge" style="
+            position:absolute;top:-2px;right:-2px;background:#f44;color:white;
+            font-size:10px;width:16px;height:16px;border-radius:50%;
+            display:none;align-items:center;justify-content:center;
+          ">0</span>
+        </button>
+        <button class="tray-icon" id="tray-power" title="Power">⏻</button>
+      </div>
+    </div>
+    
+    <div id="start-menu">
+      <div id="start-menu-header">OS-JS Desktop</div>
+      <div id="start-menu-items"></div>
+    </div>
+  </div>
+
   <script src="js/fs.js"></script>
   <script src="js/shell.js"></script>
   <script src="js/terminal.js"></script>
+  <script src="js/desktop/window-manager.js"></script>
+  <script src="js/apps/app-launcher.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

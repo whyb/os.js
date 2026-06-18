@@ -25,6 +25,7 @@ class Terminal {
     this.isProcessing = false;
     this.isWaitingForInput = false;
     this.inputResolve = null;
+    this.disabled = false;
 
     // 初始化
     this._init();
@@ -37,10 +38,13 @@ class Terminal {
     document.addEventListener('keydown', (e) => this._onKeyDown(e));
 
     this.terminalEl.addEventListener('click', () => {
-      this.hiddenInput.focus();
+      if (!this.disabled) {
+        this.hiddenInput.focus();
+      }
     });
 
     this.hiddenInput.addEventListener('input', (e) => {
+      if (this.disabled) return;
       const value = this.hiddenInput.value;
       if (value) {
         this.currentInput = this.currentInput.slice(0, this.cursorPos) + value + this.currentInput.slice(this.cursorPos);
@@ -56,6 +60,9 @@ class Terminal {
   // ===== 键盘事件处理 =====
 
   _onKeyDown(e) {
+    // 桌面模式已激活时，跳过终端键盘处理
+    if (this.disabled) return;
+
     if (this.isWaitingForInput) {
       this._handleReadInput(e);
       return;
@@ -189,19 +196,17 @@ class Terminal {
     }
   }
 
-  // ===== 光标渲染（核心修复） =====
+  // ===== 光标渲染 =====
 
   _renderInput() {
     const before = this.currentInput.slice(0, this.cursorPos);
     const charAtCursor = this.currentInput[this.cursorPos] || '';
     const after = this.currentInput.slice(this.cursorPos + 1);
 
-    // 转义 HTML
     const escapeBefore = this._escapeHtml(before);
     const escapeChar = this._escapeHtml(charAtCursor);
     const escapeAfter = this._escapeHtml(after);
 
-    // 光标位置：有字符则反色显示字符，没有字符则显示空格块
     const cursorHtml = '<span class="cursor-char">' + (escapeChar || '&nbsp;') + '</span>';
 
     this.inputDisplayEl.innerHTML = escapeBefore + cursorHtml + escapeAfter;

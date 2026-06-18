@@ -2934,6 +2934,22 @@
     location.reload();
   };
 
+  // 暴露 fs、shell 和 terminal 供桌面应用使用
+  window.fs = fs;
+  window.shell = shell;
+  window.terminal = terminal;
+
+  // 初始化桌面环境
+  const wm = new WindowManager();
+  AppLauncher.init(wm);
+  window.wm = wm;
+
+  // 注册 desktop 命令（切换桌面/终端模式）
+  shell.registerCommand('desktop', () => {
+    wm.toggleDesktop();
+    return null;
+  });
+
   // 显示欢迎信息
   terminal.showBanner();
 
