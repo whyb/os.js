@@ -207,6 +207,45 @@
         mapfile: 'Read lines into array',
         readarray: 'Same as mapfile',
       },
+      'Process & System': {
+        ps: 'Report a snapshot of current processes',
+        top: 'Display Linux processes (dynamic)',
+        df: 'Report file system disk space usage',
+        du: 'Estimate file space usage',
+        kill: 'Send signal to process/job',
+        uptime: 'Show system uptime',
+        uname: 'Print system information',
+      },
+      'File Permission': {
+        chmod: 'Change file mode bits',
+        chown: 'Change file owner and group',
+        stat: 'Display file status',
+        file: 'Determine file type',
+      },
+      'Text Processing': {
+        diff: 'Compare files line by line',
+        xargs: 'Build and execute command lines from stdin',
+        grep: 'Search text patterns in files',
+        wc: 'Count lines, words, characters',
+        sort: 'Sort lines of text',
+        uniq: 'Remove duplicate lines',
+        more: 'Display file contents page by page',
+        less: 'Opposite of more (same as more)',
+      },
+      'Manual & Help': {
+        man: 'Display the manual for a command',
+        help: 'Display this help message',
+        which: 'Locate a command',
+        whereis: 'Locate binary, source, and manual files',
+        type: 'Display command type',
+        command: 'Execute a simple command',
+      },
+      'Privilege': {
+        sudo: 'Execute a command as another user',
+        su: 'Run a command with substitute user',
+        whoami: 'Print current user name',
+        id: 'Print user identity',
+      },
       'Fun & Misc': {
         sleep: 'Delay execution',
         motd: 'Display message of the day',
@@ -2320,6 +2359,573 @@
 
     return result.join('\n');
   });
+
+  // ---------- more / less（分页器） ----------
+  shell.registerCommand('more', (args, ctx, stdin) => {
+    let text = stdin;
+    const files = [];
+    for (const arg of args) {
+      if (!arg.startsWith('-')) files.push(arg);
+    }
+    
+    if (!text && files.length === 0) {
+      return 'more: missing filename';
+    }
+    
+    if (!text) {
+      for (const file of files) {
+        const fullPath = shell.fs.resolvePath(shell.cwd, file);
+        const result = shell.fs.readFile(fullPath);
+        if (!result.success) {
+          return `more: ${file}: ${result.error}`;
+        }
+        text = (text || '') + result.content + '\n';
+      }
+    }
+    
+    // 分页显示（简化版：一次显示全部，因为终端模拟器本身可滚动）
+    const lines = (text || '').split('\n');
+    if (lines.length <= 30) return text;
+    
+    // 显示前 30 行，提示更多
+    return lines.slice(0, 30).join('\n') + '\n\x1b[1;33m--More--(\x1b[0m' + (lines.length - 30) + ' more lines\x1b[1;33m)\x1b[0m';
+  });
+  shell.registerCommand('less', (args, ctx, stdin) => shell.commands['more'](args, ctx, stdin));
+
+  // ---------- man（手册页） ----------
+  const manPages = {
+    help: `NAME\n    help - Display information about builtin commands\n\nSYNOPSIS\n    help [-dms] [pattern ...]\n\nDESCRIPTION\n    Display helpful information about builtin commands.`,
+    ls: `NAME\n    ls - list directory contents\n\nSYNOPSIS\n    ls [OPTION]... [FILE]...\n\nDESCRIPTION\n    List information about the FILEs (the current directory by default).\n\n    -a, --all  do not ignore entries starting with .\n    -l         use a long listing format`,
+    cat: `NAME\n    cat - concatenate files and print on the standard output\n\nSYNOPSIS\n    cat [OPTION]... [FILE]...\n\nDESCRIPTION\n    Concatenate FILE(s) to standard output.\n\n    -n     number all output lines\n    -b     number nonempty output lines\n    -s     suppress repeated empty output lines`,
+    grep: `NAME\n    grep - print lines that match patterns\n\nSYNOPSIS\n    grep [OPTION]... PATTERN [FILE]...\n\nDESCRIPTION\n    Search for PATTERN in each FILE.\n\n    -i     ignore case distinctions\n    -n     print line number with output lines\n    -v     invert match\n    -c     print only a count of selected lines`,
+    cd: `NAME\n    cd - change the current directory\n\nSYNOPSIS\n    cd [dir]\n\nDESCRIPTION\n    Change the current directory to DIR.\n\n    Use cd - to go to the previous directory.`,
+    echo: `NAME\n    echo - display a line of text\n\nSYNOPSIS\n    echo [SHORT-OPTION]... [STRING]...\n\nDESCRIPTION\n    Echo the STRING(s) to standard output.\n\n    -n     do not output the trailing newline\n    -e     enable interpretation of backslash escapes`,
+    rm: `NAME\n    rm - remove files or directories\n\nSYNOPSIS\n    rm [OPTION]... [FILE]...\n\nDESCRIPTION\n    Remove the FILE(s).\n\n    -r, -R  remove directories recursively\n    -f      ignore nonexistent files, never prompt`,
+    mkdir: `NAME\n    mkdir - make directories\n\nSYNOPSIS\n    mkdir [OPTION]... DIRECTORY...\n\nDESCRIPTION\n    Create the DIRECTORY(ies), if they do not already exist.\n\n    -p, --parents  no error if existing, make parent directories as needed`,
+    touch: `NAME\n    touch - change file timestamps\n\nSYNOPSIS\n    touch [OPTION]... FILE...\n\nDESCRIPTION\n    Update the access and modification times of each FILE to the current time.`,
+    cp: `NAME\n    cp - copy files and directories\n\nSYNOPSIS\n    cp [OPTION]... SOURCE... DIRECTORY\n\nDESCRIPTION\n    Copy SOURCE to DEST, or multiple SOURCE(s) to DIRECTORY.`,
+    mv: `NAME\n    mv - move (rename) files\n\nSYNOPSIS\n    mv [OPTION]... SOURCE... DIRECTORY\n\nDESCRIPTION\n    Rename SOURCE to DEST, or move SOURCE(s) to DIRECTORY.`,
+    find: `NAME\n    find - search for files in a directory hierarchy\n\nSYNOPSIS\n    find [path...] [expression]\n\nDESCRIPTION\n    Search for files in a directory hierarchy.\n\n    -name pattern  file name matches pattern\n    -type c        file is of type c (f=file, d=dir)`,
+    man: `NAME\n    man - display the manual for a command\n\nSYNOPSIS\n    man [command]\n\nDESCRIPTION\n    Display the manual page for the given command.\n\n    Available pages: help, ls, cat, grep, cd, echo, rm, mkdir, touch, cp, mv, find`,
+    wc: `NAME\n    wc - print newline, word, and byte counts\n\nSYNOPSIS\n    wc [OPTION]... [FILE]...\n\nDESCRIPTION\n    Print newline, word, and byte counts for each FILE.\n\n    -l     print the newline counts\n    -w     print the word counts\n    -c     print the byte counts`,
+    head: `NAME\n    head - output the first part of files\n\nSYNOPSIS\n    head [OPTION]... [FILE]...\n\nDESCRIPTION\n    Print the first 10 lines of each FILE to standard output.\n\n    -n N  print the first N lines`,
+    tail: `NAME\n    tail - output the last part of files\n\nSYNOPSIS\n    tail [OPTION]... [FILE]...\n\nDESCRIPTION\n    Print the last 10 lines of each FILE to standard output.\n\n    -n N  print the last N lines`,
+    sort: `NAME\n    sort - sort lines of text files\n\nSYNOPSIS\n    sort [OPTION]... [FILE]...\n\nDESCRIPTION\n    Sort lines of text files.\n\n    -r     reverse the result\n    -n     compare according to string numerical value\n    -u     output only the first of equal lines`,
+    uniq: `NAME\n    uniq - report or omit repeated lines\n\nSYNOPSIS\n    uniq [OPTION]... [INPUT [OUTPUT]]\n\nDESCRIPTION\n    Filter adjacent matching lines from INPUT.\n\n    -c     prefix lines by the number of occurrences\n    -i     ignore case when comparing`,
+    chmod: `NAME\n    chmod - change file mode bits\n\nSYNOPSIS\n    chmod [OPTION]... MODE[,MODE]... FILE...\n\nDESCRIPTION\n    Change the mode (permissions) of each FILE to MODE.\n\n    MODE can be: 755, 644, u+x, g-w, o=r, a=rx`,
+    chown: `NAME\n    chown - change file owner and group\n\nSYNOPSIS\n    chown [OPTION]... [OWNER][:[GROUP]] FILE...\n\nDESCRIPTION\n    Change the owner and/or group of each FILE to OWNER and/or GROUP.`,
+    ps: `NAME\n    ps - report a snapshot of the current processes\n\nSYNOPSIS\n    ps [OPTION]...\n\nDESCRIPTION\n    Display information about active processes.\n\n    -e     select all processes\n    -f     do full-format listing`,
+    top: `NAME\n    top - display Linux processes\n\nSYNOPSIS\n    top [OPTION]...\n\nDESCRIPTION\n    The top program provides a dynamic real-time view of a running system.`,
+    df: `NAME\n    df - report file system disk space usage\n\nSYNOPSIS\n    df [OPTION]... [FILE]...\n\nDESCRIPTION\n    Show information about the file system on which each FILE resides.\n\n    -h     print sizes in human readable format`,
+    du: `NAME\n    du - estimate file space usage\n\nSYNOPSIS\n    du [OPTION]... [FILE]...\n\nDESCRIPTION\n    Summarize disk usage of each FILE.\n\n    -h     print sizes in human readable format\n    -s     display only a total for each argument`,
+    which: `NAME\n    which - locate a command\n\nSYNOPSIS\n    which [COMMAND]...\n\nDESCRIPTION\n    Return the pathnames of the files which would be executed.`,
+    whereis: `NAME\n    whereis - locate the binary, source, and manual page files\n\nSYNOPSIS\n    whereis [OPTIONS] NAME...\n\nDESCRIPTION\n    Locate the binary, source, and manual page files for a command.`,
+    diff: `NAME\n    diff - compare files line by line\n\nSYNOPSIS\n    diff [OPTION]... FILES\n\nDESCRIPTION\n    Compare FILES line by line.\n\n    -u     output NUM lines of unified context\n    -i     ignore case differences`,
+    xargs: `NAME\n    xargs - build and execute command lines from standard input\n\nSYNOPSIS\n    xargs [OPTION]... COMMAND [INITIAL-ARGS]...\n\nDESCRIPTION\n    Read items from the standard input and execute COMMAND.`,
+    sudo: `NAME\n    sudo - execute a command as another user\n\nSYNOPSIS\n    sudo [OPTION]... COMMAND\n\nDESCRIPTION\n    Run COMMAND as root (simulated).`,
+    su: `NAME\n    su - run a command with substitute user and group ID\n\nSYNOPSIS\n    su [OPTION]... [-] [user [args...]]\n\nDESCRIPTION\n    Switch to another user (simulated).`,
+  };
+
+  shell.registerCommand('man', (args) => {
+    if (args.length === 0) return 'man: What manual page do you want?';
+    const topic = args[0];
+    if (manPages[topic]) {
+      return manPages[topic];
+    }
+    return `No manual entry for ${topic}`;
+  });
+
+  // ---------- sudo / su ----------
+  let sudoTimestamp = 0;
+
+  shell.registerCommand('sudo', async (args) => {
+    if (args.length === 0) return 'sudo: missing operand';
+    if (args[0] === '-i' || args[0] === '-s') args = args.slice(1);
+    if (args.length === 0) {
+      shell.username = 'root';
+      shell.env.USER = 'root';
+      shell.cwd = '/root';
+      shell.env.PWD = '/root';
+      return '# Root shell (simulated)\n# Type "exit" to return to normal user';
+    }
+
+    // 模拟密码输入 - 简易验证
+    const cmdName = args[0];
+    const cmdArgs = args.slice(1);
+    
+    if (shell.commands[cmdName]) {
+      // 以 root 身份执行
+      const savedUser = shell.username;
+      shell.username = 'root';
+      shell.env.USER = 'root';
+      const result = await shell.commands[cmdName](cmdArgs, shell);
+      shell.username = savedUser;
+      shell.env.USER = savedUser;
+      return result;
+    }
+    return `sudo: ${cmdName}: command not found`;
+  });
+
+  shell.registerCommand('su', (args) => {
+    let targetUser = 'root';
+    let login = false;
+    
+    for (const arg of args) {
+      if (arg === '-') login = true;
+      else if (!arg.startsWith('-')) targetUser = arg;
+    }
+    
+    const savedUser = shell.username;
+    shell.username = targetUser;
+    shell.env.USER = targetUser;
+    
+    if (login) {
+      shell.cwd = targetUser === 'root' ? '/root' : `/home/${targetUser}`;
+      shell.env.PWD = shell.cwd;
+    }
+    
+    if (targetUser === 'root') {
+      return '# Root shell (simulated). Use "exit" to return.';
+    }
+    return `$ ${targetUser} shell (simulated). Use "exit" to return.`;
+  });
+
+  // ---------- which / whereis ----------
+  shell.registerCommand('which', (args) => {
+    if (args.length === 0) return '';
+    let output = '';
+    for (const arg of args) {
+      if (shell.commands[arg]) {
+        output += `/usr/bin/${arg}\n`;
+      } else if (shell.aliases[arg]) {
+        output += `alias: ${arg}='${shell.aliases[arg]}'\n`;
+      } else if (shell.functions[arg]) {
+        output += `${arg} is a shell function\n`;
+      } else {
+        output += `which: no ${arg} in (${shell.env.PATH})\n`;
+      }
+    }
+    return output.trimEnd();
+  });
+
+  shell.registerCommand('whereis', (args) => {
+    if (args.length === 0) return 'whereis: missing operand';
+    let output = '';
+    for (const arg of args) {
+      if (shell.commands[arg]) {
+        output += `${arg}: /usr/bin/${arg} /usr/share/man/man1/${arg}.1\n`;
+      } else {
+        output += `${arg}: \n`;
+      }
+    }
+    return output.trimEnd();
+  });
+
+  // ---------- diff ----------
+  shell.registerCommand('diff', (args) => {
+    let unified = false;
+    let ignoreCase = false;
+    const files = [];
+    
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '-u') unified = true;
+      else if (args[i] === '-i') ignoreCase = true;
+      else if (!args[i].startsWith('-')) files.push(args[i]);
+    }
+    
+    if (files.length < 2) return 'diff: missing operand after `diff\'';
+    
+    const file1 = files[0];
+    const file2 = files[1];
+    const path1 = shell.fs.resolvePath(shell.cwd, file1);
+    const path2 = shell.fs.resolvePath(shell.cwd, file2);
+    
+    const result1 = shell.fs.readFile(path1);
+    const result2 = shell.fs.readFile(path2);
+    
+    if (!result1.success) return `diff: ${file1}: ${result1.error}`;
+    if (!result2.success) return `diff: ${file2}: ${result2.error}`;
+    
+    const lines1 = (result1.content || '').split('\n');
+    const lines2 = (result2.content || '').split('\n');
+    
+    if (unified) {
+      let output = `--- ${file1}\n+++ ${file2}\n`;
+      
+      // 简单的逐行比较（简化版）
+      const maxLen = Math.max(lines1.length, lines2.length);
+      let diffLines = [];
+      for (let i = 0; i < maxLen; i++) {
+        const l1 = ignoreCase ? (lines1[i] || '').toLowerCase() : (lines1[i] || '');
+        const l2 = ignoreCase ? (lines2[i] || '').toLowerCase() : (lines2[i] || '');
+        if (l1 !== l2) {
+          if (lines1[i] !== undefined) diffLines.push(`-${lines1[i]}`);
+          if (lines2[i] !== undefined) diffLines.push(`+${lines2[i]}`);
+        }
+      }
+      
+      if (diffLines.length === 0) return '';
+      output += `@@ -1,${lines1.length} +1,${lines2.length} @@\n`;
+      output += diffLines.join('\n');
+      return output;
+    }
+    
+    // 标准 diff 输出
+    let output = '';
+    for (let i = 0; i < Math.max(lines1.length, lines2.length); i++) {
+      const l1 = ignoreCase ? (lines1[i] || '').toLowerCase() : (lines1[i] || '');
+      const l2 = ignoreCase ? (lines2[i] || '').toLowerCase() : (lines2[i] || '');
+      if (l1 !== l2) {
+        if (i < lines1.length && i < lines2.length) {
+          output += `${i + 1}c${i + 1}\n< ${lines1[i]}\n---\n> ${lines2[i]}\n`;
+        } else if (i >= lines1.length) {
+          output += `${i}a${i + 1}\n> ${lines2[i]}\n`;
+        } else {
+          output += `${i + 1}d${i}\n< ${lines1[i]}\n`;
+        }
+      }
+    }
+    
+    return output.trimEnd() || null;
+  });
+
+  // ---------- xargs ----------
+  shell.registerCommand('xargs', async (args, ctx, stdin) => {
+    if (!stdin) return null;
+    
+    let cmd = 'echo';
+    let cmdArgs = [];
+    let replaceStr = null;
+    let maxArgs = 100;
+    
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '-I' && args[i + 1]) {
+        replaceStr = args[++i];
+      } else if (args[i] === '-n' && args[i + 1]) {
+        maxArgs = parseInt(args[++i]) || maxArgs;
+      } else if (args[i] === '-p') {
+        // prompt mode, ignore
+      } else if (cmd === 'echo' && args[i] !== 'echo') {
+        cmd = args[i];
+        cmdArgs = args.slice(i + 1);
+        break;
+      }
+    }
+    
+    const items = stdin.trim().split(/\s+/).filter(s => s);
+    if (items.length === 0) return null;
+    
+    let output = '';
+    for (let i = 0; i < items.length; i += maxArgs) {
+      const batch = items.slice(i, i + maxArgs);
+      let finalArgs;
+      
+      if (replaceStr) {
+        finalArgs = cmdArgs.map(a => a.replace(replaceStr, batch[0]));
+      } else {
+        finalArgs = [...cmdArgs, ...batch];
+      }
+      
+      if (shell.commands[cmd]) {
+        const result = shell.commands[cmd](finalArgs, shell);
+        if (result && typeof result.then === 'function') {
+          const awaited = await result;
+          if (awaited) output += (output ? '\n' : '') + awaited;
+        } else if (result) {
+          output += (output ? '\n' : '') + result;
+        }
+      }
+    }
+    
+    return output || null;
+  });
+
+  // ---------- chmod ----------
+  shell.registerCommand('chmod', (args) => {
+    if (args.length < 2) return 'chmod: missing operand';
+    
+    const mode = args[0];
+    const files = args.slice(1);
+    
+    // 解析模式（简化版）
+    let numericMode = null;
+    if (/^[0-7]{3}$/.test(mode)) {
+      numericMode = parseInt(mode, 8);
+    }
+    
+    let output = '';
+    for (const file of files) {
+      const fullPath = shell.fs.resolvePath(shell.cwd, file);
+      const node = shell.fs.getNode(fullPath);
+      if (!node) {
+        output += `chmod: cannot access '${file}': No such file or directory\n`;
+        continue;
+      }
+      
+      // 文件系统实际上不存储权限，但我们可以模拟返回成功
+      // 如果解析成功则无输出
+    }
+    
+    return output.trimEnd() || null;
+  });
+
+  // ---------- chown ----------
+  shell.registerCommand('chown', (args) => {
+    if (args.length < 2) return 'chown: missing operand';
+    
+    const ownerSpec = args[0];
+    const files = args.slice(1);
+    
+    let owner = ownerSpec;
+    let group = null;
+    const colonIdx = ownerSpec.indexOf(':');
+    if (colonIdx !== -1) {
+      owner = ownerSpec.slice(0, colonIdx);
+      group = ownerSpec.slice(colonIdx + 1);
+    }
+    
+    let output = '';
+    for (const file of files) {
+      const fullPath = shell.fs.resolvePath(shell.cwd, file);
+      const node = shell.fs.getNode(fullPath);
+      if (!node) {
+        output += `chown: cannot access '${file}': No such file or directory\n`;
+        continue;
+      }
+    }
+    
+    return output.trimEnd() || null;
+  });
+
+  // ---------- ps ----------
+  shell.registerCommand('ps', (args) => {
+    const all = args.includes('-e') || args.includes('-A') || args.includes('aux');
+    const full = args.includes('-f') || args.includes('-l');
+    
+    let output = '';
+    if (full) {
+      output = 'UID        PID   PPID  C STIME TTY          TIME CMD\n';
+    } else {
+      output = '  PID TTY          TIME CMD\n';
+    }
+    
+    // 模拟进程
+    const processes = [
+      { pid: 1, ppid: 0, cmd: 'init', uid: 'root', time: '00:00:01', stime: '14:30' },
+      { pid: 2, ppid: 0, cmd: '[kthreadd]', uid: 'root', time: '00:00:00', stime: '14:30' },
+      { pid: 100, ppid: 1, cmd: 'systemd', uid: 'root', time: '00:00:05', stime: '14:30' },
+      { pid: 200, ppid: 1, cmd: 'bash', uid: 'user', time: '00:00:02', stime: '14:31' },
+      { pid: Math.floor(Math.random() * 9000) + 1000, ppid: 200, cmd: 'ps', uid: 'user', time: '00:00:00', stime: new Date().toLocaleTimeString() },
+    ];
+    
+    if (all) {
+      // 加更多进程
+      processes.push(
+        { pid: 300, ppid: 1, cmd: 'sshd', uid: 'root', time: '00:00:01', stime: '14:30' },
+        { pid: 400, ppid: 1, cmd: 'cron', uid: 'root', time: '00:00:00', stime: '14:30' },
+        { pid: 500, ppid: 1, cmd: 'nginx', uid: 'www-data', time: '00:00:03', stime: '14:31' },
+      );
+    }
+    
+    for (const proc of processes) {
+      if (full) {
+        output += `${proc.uid.padEnd(8)} ${String(proc.pid).padStart(5)} ${String(proc.ppid).padStart(5)}  ${Math.floor(Math.random() * 3)} ${proc.stime} ?        ${proc.time} ${proc.cmd}\n`;
+      } else {
+        output += ` ${String(proc.pid).padStart(5)} ?        ${proc.time} ${proc.cmd}\n`;
+      }
+    }
+    
+    return output.trimEnd();
+  });
+
+  // ---------- top ----------
+  shell.registerCommand('top', () => {
+    const now = new Date();
+    const time = now.toLocaleTimeString();
+    const uptime = `${Math.floor(Math.random() * 200) + 1}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`;
+    const load = [(Math.random() * 2).toFixed(2), (Math.random() * 1.5).toFixed(2), (Math.random() * 1).toFixed(2)];
+    const totalMem = 7982;
+    const usedMem = Math.floor(Math.random() * 2000) + 2000;
+    const totalSwap = 2048;
+    const usedSwap = Math.floor(Math.random() * 200);
+    
+    let output = `\x1b[1mtop - ${time} up ${uptime},  1 user,  load average: ${load.join(', ')}\x1b[0m\n`;
+    output += `Tasks:   ${Math.floor(Math.random() * 50) + 50} total,   1 running,  ${Math.floor(Math.random() * 30) + 20} sleeping\n`;
+    output += `%Cpu(s):  ${(Math.random() * 15).toFixed(1)} us,  ${(Math.random() * 5).toFixed(1)} sy,  0.0 ni,  ${(Math.random() * 10 + 80).toFixed(1)} id\n`;
+    output += `MiB Mem :  ${totalMem} total,   ${(totalMem - usedMem)} free,    ${usedMem} used,    287 buff/cache\n`;
+    output += `MiB Swap:  ${totalSwap} total,   ${(totalSwap - usedSwap)} free,    ${usedSwap} used.  ${(totalMem - usedMem + 1000)} avail Mem\n\n`;
+    
+    output += '  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND\n';
+    const procs = [
+      { pid: 1, user: 'root', cpu: 0.0, mem: 0.1, virt: 1024, res: 8, time: '0:00.01', cmd: 'init' },
+      { pid: 200, user: 'user', cpu: 0.0, mem: 0.2, virt: 2048, res: 16, time: '0:00.02', cmd: 'bash' },
+      { pid: Math.floor(Math.random() * 9000) + 1000, user: 'user', cpu: (Math.random() * 5).toFixed(1), mem: (Math.random() * 2).toFixed(1), virt: 4096, res: 32, time: '0:00.00', cmd: 'top' },
+    ];
+    
+    for (const p of procs) {
+      output += `${String(p.pid).padStart(5)} ${p.user.padEnd(8)} 20   0   ${String(p.virt).padStart(5)}  ${String(p.res).padStart(5)}   ${String(Math.floor(p.res * 0.6)).padStart(4)} S  ${String(p.cpu).padStart(5)} ${String(p.mem).padStart(5)}   ${p.time} ${p.cmd}\n`;
+    }
+    
+    return output;
+  });
+
+  // ---------- df ----------
+  shell.registerCommand('df', (args) => {
+    const humanReadable = args.includes('-h');
+    const all = args.includes('-a');
+    
+    const formatSize = (kb) => {
+      if (humanReadable) {
+        if (kb >= 1048576) return (kb / 1048576).toFixed(1) + 'G';
+        if (kb >= 1024) return (kb / 1024).toFixed(1) + 'M';
+        return kb + 'K';
+      }
+      return String(kb).padStart(10, ' ');
+    };
+    
+    const formatSizeH = (kb) => {
+      if (kb >= 1048576) return (kb / 1048576).toFixed(1) + 'G';
+      if (kb >= 1024) return (kb / 1024).toFixed(1) + 'M';
+      return kb + 'K';
+    };
+    
+    let output = '';
+    if (humanReadable) {
+      output = 'Filesystem      Size  Used Avail Use% Mounted on\n';
+    } else {
+      output = 'Filesystem     1K-blocks    Used Available Use% Mounted on\n';
+    }
+    
+    const filesystems = [
+      { fs: '/dev/sda1', size: 8388608, used: 4194304, mount: '/' },
+      { fs: 'tmpfs', size: 1048576, used: 65536, mount: '/tmp' },
+      { fs: '/dev/sda2', size: 16777216, used: 8388608, mount: '/home' },
+      { fs: 'devtmpfs', size: 524288, used: 0, mount: '/dev' },
+    ];
+    
+    for (const f of filesystems) {
+      const used = f.used;
+      const avail = f.size - used;
+      const usePercent = Math.round((used / f.size) * 100);
+      
+      if (humanReadable) {
+        output += `${f.fs.padEnd(14)} ${formatSizeH(f.size).padStart(4)} ${formatSizeH(used).padStart(4)} ${formatSizeH(avail).padStart(4)} ${String(usePercent).padStart(3)}% ${f.mount}\n`;
+      } else {
+        output += `${f.fs.padEnd(14)} ${formatSize(f.size)} ${formatSize(used)} ${formatSize(avail)} ${String(usePercent).padStart(3)}% ${f.mount}\n`;
+      }
+    }
+    
+    return output.trimEnd();
+  });
+
+  // ---------- du ----------
+  shell.registerCommand('du', (args) => {
+    const humanReadable = args.includes('-h');
+    const summarize = args.includes('-s');
+    const targets = args.filter(a => !a.startsWith('-'));
+    
+    if (targets.length === 0) targets.push('.');
+    
+    const formatSize = (bytes) => {
+      if (humanReadable) {
+        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + 'G';
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'M';
+        if (bytes >= 1024) return (bytes / 1024).toFixed(1) + 'K';
+        return bytes + 'B';
+      }
+      return String(bytes).padStart(8, ' ');
+    };
+    
+    const formatSizeD = (bytes) => {
+      if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + 'G';
+      if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'M';
+      if (bytes >= 1024) return (bytes / 1024).toFixed(1) + 'K';
+      return bytes + 'B';
+    };
+    
+    let output = '';
+    for (const target of targets) {
+      const fullPath = shell.fs.resolvePath(shell.cwd, target);
+      const node = shell.fs.getNode(fullPath);
+      if (!node) {
+        output += `du: cannot access '${target}': No such file or directory\n`;
+        continue;
+      }
+      
+      if (node.type === 'file') {
+        const size = (node.content || '').length;
+        output += (humanReadable ? formatSizeD(size) : formatSize(size)) + '\t' + target + '\n';
+      } else {
+        const totalSize = shell.fs.getSize(fullPath);
+        if (summarize) {
+          output += (humanReadable ? formatSizeD(totalSize) : formatSize(totalSize)) + '\t' + target + '\n';
+        } else {
+          // 显示每个子目录
+          const listDir = (path, node, depth) => {
+            if (!node || node.type !== 'dir') return;
+            const size = shell.fs.getSize(path);
+            const displayName = path === fullPath ? target : path.slice(fullPath.length + 1);
+            output += (humanReadable ? formatSizeD(size) : formatSize(size)) + '\t' + displayName + '\n';
+            if (node.children) {
+              for (const [name, child] of Object.entries(node.children)) {
+                if (child.type === 'dir') {
+                  listDir(path + '/' + name, child, depth + 1);
+                }
+              }
+            }
+          };
+          listDir(fullPath, node, 0);
+        }
+      }
+    }
+    
+    return output.trimEnd() || null;
+  });
+
+  // ========== 控制流命令 ==========
+  
+  // if/then/else/fi
+  shell.registerCommand('if', async (args, ctx, stdin) => {
+    // 语法：if [condition]; then commands; [elif ...]; [else ...]; fi
+    // 简化版：读取多行直到 fi
+    // 这里提供一个简化实现
+    return 'if: syntax error (use with shell scripts)';
+  });
+
+  // for
+  shell.registerCommand('for', async (args, ctx, stdin) => {
+    // 语法：for var in list; do commands; done
+    // 简化版
+    return 'for: syntax error (use with shell scripts)';
+  });
+
+  // while
+  shell.registerCommand('while', async (args, ctx, stdin) => {
+    // 语法：while condition; do commands; done
+    return 'while: syntax error (use with shell scripts)';
+  });
+
+  // until
+  shell.registerCommand('until', async (args, ctx, stdin) => {
+    // 语法：until condition; do commands; done
+    return 'until: syntax error (use with shell scripts)';
+  });
+
+  // case
+  shell.registerCommand('case', async (args, ctx, stdin) => {
+    // 语法：case word in pattern) commands;; esac
+    return 'case: syntax error (use with shell scripts)';
+  });
+
+  // function - 定义函数
+  shell.registerCommand('function', (args, ctx, stdin) => {
+    // 语法：function name { commands; }
+    if (args.length < 1) return 'function: missing function name';
+    return 'function: use with shell scripts (e.g., source a script file)';
+  });
+
+  // 增强 source 以支持函数定义
+  // source 已经实现，但需要更新以支持读取多行函数定义
 
   // ========== 初始化 ==========
   // 重置 FS 按钮（调试用）
